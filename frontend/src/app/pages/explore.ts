@@ -27,6 +27,13 @@ import { TopBar } from '../components/top-bar';
 import { CATEGORIAS, Filtro } from '../models/vitrina';
 import { CatalogoPublicoService, PiezaPublica } from '../services/catalogo-publico.service';
 import { DetalleDialogo } from '../services/detalle-dialogo';
+import { Icon } from '../components/icon';
+import { ToastService } from '../services/toast.service';
+import {
+  DispositivoService,
+  interpretarCodigo,
+  mensajeDispositivo,
+} from '../services/dispositivo.service';
 
 @Component({
   selector: 'vt-explore-page',
@@ -38,6 +45,7 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
     MatChipsModule,
     EmptyState,
     ComunidadLateral,
+    Icon,
     IconButton,
     PieceCard,
     PromoBanner,
@@ -65,6 +73,60 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
             placeholder="Busca cartas, vinilos, juguetes…"
           />
         </div>
+        <div class="herramientas" role="toolbar" aria-label="Funciones del celular">
+          <button
+            type="button"
+            vt-button
+            size="sm"
+            variant="secondary"
+            icon="qr_code_scanner"
+            [disabled]="escaneando()"
+            (click)="escanear()"
+          >
+            {{ escaneando() ? 'Leyendo…' : 'Escanear' }}
+          </button>
+          <button
+            type="button"
+            vt-button
+            size="sm"
+            [variant]="cerca() ? 'primary' : 'secondary'"
+            icon="near_me"
+            [disabled]="ubicando()"
+            [attr.aria-pressed]="!!cerca()"
+            (click)="alternarCerca()"
+          >
+            {{ ubicando() ? 'Ubicándote…' : 'Cerca de mí' }}
+          </button>
+          <button
+            type="button"
+            vt-button
+            size="sm"
+            variant="secondary"
+            icon="vibration"
+            [disabled]="sorprendiendo()"
+            (click)="sorprender()"
+          >
+            Sorpréndeme
+          </button>
+        </div>
+        @if (sensorActivo()) {
+          <p class="caption vt-muted pista">Agita el celular para descubrir una pieza al azar.</p>
+        }
+        @if (codigo()) {
+          <p class="filtro-activo caption">
+            Piezas con el código <strong>{{ codigo() }}</strong>
+            <button
+              type="button"
+              vt-button
+              size="sm"
+              variant="secondary"
+              icon="close"
+              (click)="quitarCodigo()"
+            >
+              Quitar
+            </button>
+          </p>
+        }
         <vt-promo-banner class="portada" (accion)="elegirCategoria('vinilos')" />
         <mat-chip-listbox
           class="vt-rail vt-category-list categorias"
@@ -81,7 +143,13 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
             </mat-basic-chip-option>
           }
         </mat-chip-listbox>
-        @if (!busqueda().trim() && filtro() === 'todas' && piezasDestacadas().length) {
+        @if (
+          !busqueda().trim() &&
+          filtro() === 'todas' &&
+          !codigo() &&
+          !cerca() &&
+          piezasDestacadas().length
+        ) {
           <section class="vt-section" aria-labelledby="destacadas-titulo">
             <h2 class="title" id="destacadas-titulo">Destacadas</h2>
             <div class="carrusel">
@@ -118,7 +186,13 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
         <section class="vt-section" aria-labelledby="resultados-titulo">
           <div class="seccion-titulo">
             <h2 class="title" id="resultados-titulo">
-              {{ busqueda().trim() || filtro() !== 'todas' ? 'Resultados' : 'Recién llegadas' }}
+              {{
+                cerca()
+                  ? 'Conseguidas cerca de ti'
+                  : busqueda().trim() || filtro() !== 'todas' || codigo()
+                    ? 'Resultados'
+                    : 'Recién llegadas'
+              }}
             </h2>
             @if (!cargando() || resultados().length) {
               <span class="caption vt-muted" role="status">{{
@@ -131,7 +205,14 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
           @if (resultados().length) {
             <div class="vt-grid">
               @for (p of resultados(); track p.id) {
-                <vt-piece-card [pieza]="p" />
+                <div class="con-distancia">
+                  <vt-piece-card [pieza]="p" />
+                  @if (cerca() && p.distancia_km != null) {
+                    <span class="distancia caption">
+                      <vt-icon name="location_on" [size]="14" />{{ distancia(p.distancia_km) }}
+                    </span>
+                  }
+                </div>
               }
             </div>
           }
@@ -155,16 +236,32 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
           } @else if (!cargando() && !resultados().length) {
             <vt-empty-state
               [titulo]="
-                busqueda().trim() || filtro() !== 'todas'
-                  ? 'No encontramos piezas'
-                  : 'Aún no hay piezas'
+                cerca()
+                  ? 'No hay piezas cerca de ti'
+                  : codigo()
+                    ? 'Nadie tiene esta pieza todavía'
+                    : busqueda().trim() || filtro() !== 'todas'
+                      ? 'No encontramos piezas'
+                      : 'Aún no hay piezas'
               "
               [texto]="
-                busqueda().trim() || filtro() !== 'todas'
-                  ? 'Prueba con otra palabra o cambia de categoría.'
-                  : 'El catálogo todavía está vacío.'
+                cerca()
+                  ? 'Ninguna pieza con ubicación se consiguió a menos de 50 km.'
+                  : codigo()
+                    ? 'Agrégala a tu colección con este código y sé el primero.'
+                    : busqueda().trim() || filtro() !== 'todas'
+                      ? 'Prueba con otra palabra o cambia de categoría.'
+                      : 'El catálogo todavía está vacío.'
               "
             >
+              @if (codigo() && auth.usuario()) {
+                <a
+                  vt-button
+                  [routerLink]="['/coleccion/nueva']"
+                  [queryParams]="{ codigo: codigo() }"
+                  >Agregar pieza</a
+                >
+              }
               <button type="button" vt-button variant="secondary" (click)="limpiar()">
                 Borrar filtros
               </button>
@@ -198,6 +295,36 @@ import { DetalleDialogo } from '../services/detalle-dialogo';
     }
     .categorias {
       margin-block: -4px;
+    }
+    .herramientas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-block: -8px;
+    }
+    .pista {
+      margin-top: -16px;
+    }
+    .filtro-activo {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      overflow-wrap: anywhere;
+    }
+    .con-distancia {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .distancia {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding-inline: 8px;
+      color: var(--ink-muted);
     }
     .seccion-titulo {
       display: flex;
@@ -327,6 +454,20 @@ export class ExplorePage {
   protected readonly error = signal(false);
   protected desplazamiento = 0;
 
+  // ───── Funciones del celular (Taller 3) ─────
+  private readonly dispositivo = inject(DispositivoService);
+  private readonly toast = inject(ToastService);
+  /** Código de barras escaneado: filtra las piezas con ese mismo código. */
+  protected readonly codigo = signal('');
+  /** Ubicación actual cuando está activo «Cerca de mí». */
+  protected readonly cerca = signal<{ latitud: number; longitud: number } | null>(null);
+  protected readonly escaneando = signal(false);
+  protected readonly ubicando = signal(false);
+  protected readonly sorprendiendo = signal(false);
+  protected readonly sensorActivo = signal(false);
+  private dejarDeEscuchar?: () => void;
+  private ultimaSorpresa?: number;
+
   constructor() {
     effect(() => {
       this.detalle.lista.set(this.resultados().map((p) => p.id));
@@ -340,12 +481,109 @@ export class ExplorePage {
       clearTimeout(this.espera);
       this.busqueda.set(params.get('q') ?? '');
       this.filtro.set(this.filtros.find((f) => f === params.get('categoria')) ?? 'todas');
+      this.codigo.set(params.get('codigo') ?? '');
       this.reiniciar();
     });
     this.destroy.onDestroy(() => {
       clearTimeout(this.espera);
       this.solicitud?.unsubscribe();
+      this.dejarDeEscuchar?.();
     });
+    // Acelerómetro: en la app, agitar el celular abre una pieza al azar.
+    if (this.dispositivo.nativa) {
+      this.dispositivo
+        .escucharSacudidas(() => this.sorprender())
+        .then((detener) => {
+          if (this.destroy.destroyed) return detener();
+          this.dejarDeEscuchar = detener;
+          this.sensorActivo.set(true);
+        })
+        .catch((e) => {
+          // Sin sensor queda el botón «Sorpréndeme»; se avisa una vez.
+          const mensaje = mensajeDispositivo(e);
+          if (mensaje) this.toast.show(`${mensaje} Usa el botón «Sorpréndeme».`, 'info');
+        });
+    }
+  }
+
+  /** Cámara: QR de Vitrina → abre la pieza o el perfil; código de barras → busca ese producto. */
+  protected async escanear(): Promise<void> {
+    this.escaneando.set(true);
+    try {
+      const leido = interpretarCodigo(await this.dispositivo.escanear());
+      if (leido.tipo === 'pieza') {
+        void this.router.navigate(['/pieza', leido.id]);
+      } else if (leido.tipo === 'coleccionista') {
+        void this.router.navigate(['/coleccionistas', leido.username]);
+      } else {
+        this.cerca.set(null);
+        void this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { q: null, categoria: null, codigo: leido.codigo },
+        });
+      }
+    } catch (e) {
+      const mensaje = mensajeDispositivo(e);
+      if (mensaje) this.toast.show(mensaje, 'danger');
+    } finally {
+      this.escaneando.set(false);
+    }
+  }
+
+  protected quitarCodigo(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { codigo: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  /** GPS: muestra las piezas conseguidas cerca, ordenadas por distancia. */
+  protected async alternarCerca(): Promise<void> {
+    if (this.cerca()) {
+      this.cerca.set(null);
+      this.reiniciar();
+      return;
+    }
+    this.ubicando.set(true);
+    try {
+      const { latitud, longitud } = await this.dispositivo.ubicacion();
+      this.cerca.set({ latitud, longitud });
+      this.reiniciar();
+    } catch (e) {
+      const mensaje = mensajeDispositivo(e);
+      if (mensaje) this.toast.show(mensaje, 'danger');
+    } finally {
+      this.ubicando.set(false);
+    }
+  }
+
+  protected distancia(km: number): string {
+    return km < 1
+      ? `a ${Math.round(km * 1000)} m`
+      : `a ${km.toLocaleString('es-CL', { maximumFractionDigits: 1 })} km`;
+  }
+
+  /** Pide al backend una pieza al azar y la abre (botón o sacudida del celular). */
+  protected sorprender(): void {
+    if (this.sorprendiendo()) return;
+    this.sorprendiendo.set(true);
+    this.api
+      .aleatoria(this.ultimaSorpresa)
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe({
+        next: (pieza) => {
+          this.sorprendiendo.set(false);
+          this.ultimaSorpresa = pieza.id;
+          navigator.vibrate?.(60);
+          void this.router.navigate(['/pieza', pieza.id]);
+        },
+        error: () => {
+          this.sorprendiendo.set(false);
+          this.toast.show('No pudimos traer una pieza al azar. Revisa tu conexión.', 'danger');
+        },
+      });
   }
 
   /** Con «/» el cursor salta al buscador, como en otros sitios. */
@@ -395,6 +633,11 @@ export class ExplorePage {
     clearTimeout(this.espera);
     this.busqueda.set('');
     this.filtro.set('todas');
+    this.cerca.set(null);
+    if (this.codigo()) {
+      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+      return;
+    }
     this.actualizarUrl();
   }
 
@@ -414,6 +657,7 @@ export class ExplorePage {
       queryParams: {
         q: q || null,
         categoria: categoria === 'todas' ? null : categoria,
+        codigo: this.codigo() || null,
       },
       replaceUrl: true,
     });
@@ -433,7 +677,10 @@ export class ExplorePage {
     this.cargando.set(true);
     this.error.set(false);
     this.solicitud = this.api
-      .listar(this.busqueda(), this.filtro(), this.desplazamiento)
+      .listar(this.busqueda(), this.filtro(), this.desplazamiento, {
+        codigo: this.codigo() || undefined,
+        cerca: this.cerca() ?? undefined,
+      })
       .subscribe({
         next: (pagina) => {
           this.resultados.update((actuales) => {

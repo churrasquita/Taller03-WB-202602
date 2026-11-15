@@ -17,7 +17,8 @@ class Configuracion(BaseSettings):
     jwt_algoritmo: str = "HS256"
     jwt_expira_minutos: int = 60 * 24
 
-    cors_origenes: list[str] = ["http://localhost:4200"]
+    # https://localhost y capacitor://localhost son el origen de la app Android/iOS hecha con Capacitor.
+    cors_origenes: list[str] = ["http://localhost:4200", "https://localhost", "capacitor://localhost"]
 
     @property
     def url_base_datos(self) -> URL:
