@@ -10,6 +10,8 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   plugins: {
+    // Íconos oscuros de la barra de estado sobre el fondo claro de la app.
+    SystemBars: { style: 'LIGHT' },
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,

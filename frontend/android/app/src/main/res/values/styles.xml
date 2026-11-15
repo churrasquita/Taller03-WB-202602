@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Las franjas de la barra de estado y de navegación usan el fondo de la app, no blanco. -->
+        <item name="android:windowBackground">@color/fondoApp</item>
+        <item name="android:statusBarColor">@color/fondoApp</item>
+        <item name="android:navigationBarColor">@color/fondoApp</item>
     </style>
 
 
