@@ -118,12 +118,12 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
             }
           </fieldset>
           <fieldset class="movil">
-            <legend class="label">Código de barras o QR</legend>
+            <legend class="label">Código de barras o QR <span class="vt-muted">(opcional)</span></legend>
             <div class="fila">
               <input
                 class="codigo"
                 formControlName="codigo"
-                placeholder="Escanéalo o escríbelo (opcional)"
+                placeholder="Escanéalo o escríbelo"
                 aria-label="Código de barras o QR"
                 maxlength="128"
               />
@@ -131,7 +131,7 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
                 type="button"
                 vt-button
                 variant="secondary"
-                size="sm"
+                size="md"
                 icon="qr_code_scanner"
                 [disabled]="ocupado() || escaneando()"
                 (click)="escanearCodigo()"
@@ -157,7 +157,7 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
                   type="button"
                   vt-button
                   variant="secondary"
-                  size="sm"
+                  size="md"
                   icon="close"
                   [disabled]="ocupado()"
                   (click)="quitarUbicacion()"
@@ -170,7 +170,7 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
                 type="button"
                 vt-button
                 variant="secondary"
-                size="sm"
+                size="md"
                 icon="my_location"
                 [disabled]="ocupado() || ubicando()"
                 (click)="usarUbicacion()"
@@ -507,10 +507,11 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
     }
     .codigo {
       flex: 1;
+      outline-offset: 2px;
       min-width: 0;
-      height: 40px;
-      padding: 0 12px;
-      border: 1px solid var(--line-strong);
+      height: 52px;
+      padding: 0 var(--space-4);
+      border: 2px solid var(--line-strong);
       border-radius: var(--radius-md);
       background: var(--surface);
       color: var(--ink);
@@ -608,7 +609,9 @@ export class PieceFormPage {
   protected async escanearCodigo(): Promise<void> {
     this.escaneando.set(true);
     try {
-      const valor = await this.dispositivo.escanear();
+      const valor = await this.dispositivo.escanear(() =>
+        this.toast.show('Preparando el lector de códigos… se descarga una sola vez.', 'info'),
+      );
       this.formulario.controls.codigo.setValue(valor.slice(0, 128));
       this.formulario.controls.codigo.markAsDirty();
       this.toast.show('Código leído', 'success');

@@ -55,7 +55,7 @@ python3 backend/descargar_fotos_demo.py
 docker compose exec api python seed.py
 ```
 
-Crea 18 usuarios con más de 80 piezas, seguidores, me gusta, guardados y comentarios con respuestas. Se puede repetir: vuelve a crear los datos de prueba desde cero. Se ingresa con `camila@vitrina.app` (o `diego@`, `sofia@`, `mateo@`, etc.) y la clave `demo12345`.
+Crea 18 usuarios con más de 80 piezas, seguidores, me gusta, guardados y comentarios con respuestas. Cerca del 80 % de las piezas tienen ubicación (Santiago, Valparaíso, Concepción y La Serena) para probar «Cerca de mí», y cinco tienen código de barras para probar el escáner (`7801610001234` está en dos colecciones de vinilos; también `5099902988818`, `4902370536485` y `0045496590086`). Se puede repetir: vuelve a crear los datos de prueba desde cero. Se ingresa con `camila@vitrina.app` (o `diego@`, `sofia@`, `mateo@`, etc.) y la clave `demo12345`.
 
 ### 3. Frontend
 
@@ -78,8 +78,8 @@ La misma aplicación Angular se empaqueta como app Android con [Capacitor](https
 | Capacidad | Plugin | Dónde se usa |
 | --- | --- | --- |
 | Cámara + QR / código de barras | `@capacitor-mlkit/barcode-scanning` | **Explorar › Escanear**: un QR de Vitrina abre la pieza o el perfil; un código de barras (EAN/UPC) muestra quién tiene ese producto, o permite agregarlo con el código ya puesto. **Agregar pieza › Escanear** guarda el código en la pieza. Cada pieza tiene **Mostrar QR** para compartirla. |
-| Ubicación (GPS) | `@capacitor/geolocation` | **Agregar pieza › Usar mi ubicación actual** guarda dónde se consiguió. **Explorar › Cerca de mí** lista las piezas conseguidas a menos de 50 km, ordenadas por distancia. El detalle enlaza al mapa. |
-| Acelerómetro | `@capacitor/motion` | En **Explorar**, agitar el celular abre una pieza al azar (también con el botón **Sorpréndeme**). |
+| Ubicación (GPS) | `@capacitor/geolocation` | **Agregar pieza › Usar mi ubicación actual** guarda dónde se consiguió. **Explorar › Cerca de mí** lista las piezas conseguidas cerca, de la más cercana a la más lejana, con la distancia en cada tarjeta y un radio a elegir (2, 10, 50 o 200 km). Si el GPS tarda (por ejemplo bajo techo) usa la ubicación aproximada de la red. |
+| Acelerómetro | `@capacitor/motion` | En **Explorar**, sacudir el celular (basta un movimiento suave de muñeca) saca una pieza sorpresa en una hoja «Te tocó…»: se puede abrir o volver a sacudir para otra. No tiene botón: la app avisa una vez por sesión que hay que agitar. La sensibilidad se ajusta en `frontend/src/app/services/sacudida.ts`. |
 
 Los datos se guardan con la API del Taller 2: las piezas tienen `codigo`, `latitud` y `longitud` (migración `0007`), y `GET /api/piezas` acepta `codigo`, `orden=cercanas&lat&lng&radio_km`. `GET /api/piezas/aleatoria` entrega la pieza al azar.
 

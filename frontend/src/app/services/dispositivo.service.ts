@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { Motion } from '@capacitor/motion';
-import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import {
+  BarcodeScanner,
+  GoogleBarcodeScannerModuleInstallState,
+} from '@capacitor-mlkit/barcode-scanning';
+import { DetectorSacudida } from './sacudida';
 
 /** Error con un mensaje listo para mostrarle a la persona. Los `cancelado` no se muestran. */
 export class ErrorDispositivo extends Error {
@@ -34,7 +38,7 @@ export class DispositivoService {
   // ───────────── Cámara: QR y códigos de barras ─────────────
 
   /** Abre la cámara y devuelve el texto del primer QR o código de barras que lea. */
-  async escanear(): Promise<string> {
+  async escanear(alPreparar?: () => void): Promise<string> {
     if (!this.nativa) {
       throw new ErrorDispositivo(
         'El escáner usa la cámara del celular: ábrelo desde la app Android de Vitrina.',
@@ -62,13 +66,7 @@ export class DispositivoService {
 
     // El lector de Google se descarga una sola vez mediante Google Play Services.
     const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
-    if (!available) {
-      void BarcodeScanner.installGoogleBarcodeScannerModule().catch(() => undefined);
-      throw new ErrorDispositivo(
-        'Estamos preparando el lector de códigos (se descarga una sola vez). Inténtalo en unos segundos.',
-        'no-disponible',
-      );
-    }
+    if (!available) await this.instalarLector(alPreparar);
 
     try {
       const { barcodes } = await BarcodeScanner.scan();
@@ -80,6 +78,46 @@ export class DispositivoService {
       const texto = String((e as Error)?.message ?? e).toLowerCase();
       if (texto.includes('cancel')) throw new ErrorDispositivo('Lectura cancelada.', 'cancelado');
       throw new ErrorDispositivo('No pudimos leer el código. Inténtalo de nuevo.', 'fallo');
+    }
+  }
+
+  /** Descarga el lector de códigos y espera a que termine, para no pedirle a la persona que reintente. */
+  private async instalarLector(alPreparar?: () => void): Promise<void> {
+    alPreparar?.();
+    const error = () =>
+      new ErrorDispositivo(
+        'No pudimos preparar el lector de códigos. Revisa tu conexión e inténtalo de nuevo.',
+        'fallo',
+      );
+    let escucha: PluginListenerHandle | undefined;
+    try {
+      await new Promise<void>((resolver, rechazar) => {
+        const limite = setTimeout(rechazar, 60_000, error());
+        BarcodeScanner.addListener('googleBarcodeScannerModuleInstallProgress', ({ state }) => {
+          if (state === GoogleBarcodeScannerModuleInstallState.COMPLETED) {
+            clearTimeout(limite);
+            resolver();
+          } else if (
+            state === GoogleBarcodeScannerModuleInstallState.FAILED ||
+            state === GoogleBarcodeScannerModuleInstallState.CANCELED
+          ) {
+            clearTimeout(limite);
+            rechazar(error());
+          }
+        })
+          .then((h) => {
+            escucha = h;
+            return BarcodeScanner.installGoogleBarcodeScannerModule();
+          })
+          .catch((e) => {
+            clearTimeout(limite);
+            rechazar(e);
+          });
+      });
+    } catch (e) {
+      throw e instanceof ErrorDispositivo ? e : error();
+    } finally {
+      void escucha?.remove();
     }
   }
 
@@ -102,11 +140,7 @@ export class DispositivoService {
           );
         }
       }
-      const { coords } = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000,
-      });
+      const { coords } = await this.posicion();
       return { latitud: coords.latitude, longitud: coords.longitude, precision: coords.accuracy };
     } catch (e) {
       if (e instanceof ErrorDispositivo) throw e;
@@ -138,6 +172,25 @@ export class DispositivoService {
     }
   }
 
+  /** GPS preciso; si no responde a tiempo (por ejemplo bajo techo) usa la ubicación aproximada de la red. */
+  private async posicion() {
+    try {
+      return await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 60000,
+      });
+    } catch (e) {
+      const texto = String((e as Error)?.message ?? e).toLowerCase();
+      if ((e as { code?: unknown })?.code !== 3 && !texto.includes('timeout')) throw e;
+      return Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 8000,
+        maximumAge: 5 * 60_000,
+      });
+    }
+  }
+
   // ───────────── Acelerómetro: agitar el celular ─────────────
 
   /**
@@ -158,27 +211,11 @@ export class DispositivoService {
       throw new ErrorDispositivo('Sin permiso para el sensor de movimiento.', 'permiso');
     }
 
-    const UMBRAL = 14; // m/s² por sobre la gravedad: un movimiento brusco, no caminar.
-    const PAUSA_MS = 1500;
-    let ultima = 0;
-    let fuertes = 0;
+    const detector = new DetectorSacudida();
     let handle: PluginListenerHandle | undefined;
     try {
-      handle = await Motion.addListener('accel', (evento) => {
-        const a = evento.accelerationIncludingGravity;
-        if (!a) return;
-        const fuerza = Math.abs(Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0) - 9.81);
-        if (fuerza < UMBRAL) {
-          fuertes = Math.max(0, fuertes - 1);
-          return;
-        }
-        const ahora = Date.now();
-        // Dos lecturas fuertes seguidas: así un golpe aislado no cuenta como sacudida.
-        if (++fuertes >= 2 && ahora - ultima > PAUSA_MS) {
-          ultima = ahora;
-          fuertes = 0;
-          alAgitar();
-        }
+      handle = await Motion.addListener('accel', ({ accelerationIncludingGravity: a }) => {
+        if (a && detector.muestra(a.x ?? 0, a.y ?? 0, a.z ?? 0, Date.now())) alAgitar();
       });
     } catch {
       throw new ErrorDispositivo('No pudimos activar el sensor de movimiento.', 'no-disponible');
