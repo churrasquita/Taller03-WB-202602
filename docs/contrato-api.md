@@ -65,6 +65,7 @@ Lo que muestra un perfil. Coincide con la interfaz `Usuario` del frontend, más 
 
 - `bio` siempre es texto: `""` si el usuario no escribió nada.
 - `seguidores` y `siguiendo` se calculan al consultar; no se envían al crear ni al editar.
+- El propio usuario cambia su bio con `PATCH /auth/yo` (`{"bio": "..."}`, hasta 300 caracteres) y recibe el `UsuarioPrivado` actualizado.
 
 ### UsuarioPrivado
 

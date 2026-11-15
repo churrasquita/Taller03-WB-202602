@@ -63,7 +63,7 @@ import {
             <a
               class="mi-avatar"
               [routerLink]="
-                auth.usuario() ? ['/coleccionistas', auth.usuario()?.username] : ['/ingresar']
+                auth.usuario() ? ['/perfil'] : ['/ingresar']
               "
               [attr.aria-label]="auth.usuario() ? 'Ir a tu perfil' : 'Ingresar'"
               ><vt-avatar [nombre]="auth.usuario()?.username ?? ''" anillo="brand" [tam]="40"
