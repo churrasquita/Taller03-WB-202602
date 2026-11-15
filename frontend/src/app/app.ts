@@ -61,8 +61,7 @@ export class App {
         else void CapApp.exitApp();
       });
       effect(() => {
-        const path = this.url().split(/[?#]/, 1)[0];
-        const azul = BARRA_AZUL.some((r) => path === r || path.startsWith(`${r}/`));
+        const azul = this.barraAzul();
         void BarraEstado.colorear({ color: azul ? '#2b4cff' : '#f1f2f6', iconosClaros: azul });
       });
     }
@@ -74,6 +73,10 @@ export class App {
     ),
     { initialValue: this.router.url },
   );
+  private readonly barraAzul = computed(() => {
+    const path = this.url().split(/[?#]/, 1)[0];
+    return BARRA_AZUL.some((r) => path === r || path.startsWith(`${r}/`));
+  });
   protected readonly conNav = computed(() => {
     const path = this.url().split(/[?#]/, 1)[0];
     return !SIN_NAV.some((r) => path === r || path.startsWith(`${r}/`));
