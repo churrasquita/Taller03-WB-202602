@@ -28,4 +28,6 @@ export interface DatosPieza {
   /** Dónde se consiguió la pieza (GPS del celular). */
   latitud?: number | null;
   longitud?: number | null;
+  /** Ciudad o comuna donde se consiguió. */
+  lugar?: string | null;
 }

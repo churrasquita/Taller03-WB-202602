@@ -150,8 +150,7 @@ const texto: (max: number) => ValidatorFn = (max) => (control) => {
               <div class="fila">
                 <span class="caption ubicacion">
                   <vt-icon name="location_on" [size]="18" />
-                  {{ formulario.controls.latitud.value!.toFixed(5) }},
-                  {{ formulario.controls.longitud.value!.toFixed(5) }}
+                  {{ formulario.controls.lugar.value ?? (formulario.controls.latitud.value!.toFixed(5) + ', ' + formulario.controls.longitud.value!.toFixed(5)) }}
                 </span>
                 <button
                   type="button"
@@ -543,6 +542,7 @@ export class PieceFormPage {
     imagen_url: new FormControl('', { nonNullable: true, validators: Validators.required }),
     codigo: new FormControl('', { nonNullable: true }),
     latitud: new FormControl<number | null>(null),
+    lugar: new FormControl<string | null>(null),
     longitud: new FormControl<number | null>(null),
   });
   private readonly dispositivo = inject(DispositivoService);
@@ -590,7 +590,7 @@ export class PieceFormPage {
     });
     effect(() => {
       if (!this.pieza.hasValue()) return;
-      const { nombre, descripcion, categoria, imagen_url, codigo, latitud, longitud } =
+      const { nombre, descripcion, categoria, imagen_url, codigo, latitud, longitud, lugar } =
         this.pieza.value();
       untracked(() =>
         this.formulario.reset({
@@ -601,6 +601,7 @@ export class PieceFormPage {
           codigo: codigo ?? '',
           latitud,
           longitud,
+          lugar: lugar ?? null,
         }),
       );
     });
@@ -627,7 +628,7 @@ export class PieceFormPage {
     this.ubicando.set(true);
     try {
       const { latitud, longitud, precision } = await this.dispositivo.ubicacion();
-      this.formulario.patchValue({ latitud, longitud });
+      this.formulario.patchValue({ latitud, longitud, lugar: await this.dispositivo.ciudad(latitud, longitud) });
       this.toast.show(`Ubicación agregada (±${Math.round(precision)} m)`, 'success');
     } catch (e) {
       const mensaje = mensajeDispositivo(e);
@@ -637,7 +638,7 @@ export class PieceFormPage {
     }
   }
   protected quitarUbicacion(): void {
-    this.formulario.patchValue({ latitud: null, longitud: null });
+    this.formulario.patchValue({ latitud: null, longitud: null, lugar: null });
   }
   protected coleccion(): string[] {
     return ['/coleccionistas', this.auth.usuario()?.username ?? ''];

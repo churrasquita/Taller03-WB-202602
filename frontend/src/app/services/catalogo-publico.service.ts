@@ -12,6 +12,8 @@ export interface PiezaPublica {
   codigo: string | null;
   latitud: number | null;
   longitud: number | null;
+  /** Ciudad o comuna donde se consiguió. */
+  lugar?: string | null;
   /** Solo en búsquedas por cercanía: kilómetros desde la ubicación enviada. */
   distancia_km?: number | null;
   dueno: { id: number; username: string };

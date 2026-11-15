@@ -25,7 +25,7 @@ export const enlacePieza = (id: number): string => `${environment.sitioUrl}/piez
         @if (p.latitud !== null && p.longitud !== null) {
           <li>
             <vt-icon name="location_on" [size]="18" />
-            <a [href]="mapa()" target="_blank" rel="noopener">Ver dónde se consiguió</a>
+            <a [href]="mapa()" target="_blank" rel="noopener">{{ p.lugar || 'Ver en el mapa' }}</a>
           </li>
         }
       </ul>
@@ -92,7 +92,8 @@ export class PieceExtra {
   protected readonly qr = signal('');
   protected readonly mapa = computed(() => {
     const { latitud, longitud } = this.pieza();
-    return `https://www.openstreetmap.org/?mlat=${latitud}&mlon=${longitud}#map=16/${latitud}/${longitud}`;
+    // En el celular abre la app de Google Maps; en el navegador, su sitio. No necesita clave.
+    return `https://www.google.com/maps/search/?api=1&query=${latitud},${longitud}`;
   });
 
   protected async alternarQr(): Promise<void> {

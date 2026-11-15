@@ -123,6 +123,18 @@ export class DispositivoService {
 
   // ───────────── Ubicación (GPS) ─────────────
 
+  /** Nombre de la ciudad o comuna de unas coordenadas (OpenStreetMap). Si falla, `null`. */
+  async ciudad(latitud: number, longitud: number): Promise<string | null> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=es&lat=${latitud}&lon=${longitud}`;
+      const { address } = await (await fetch(url)).json();
+      const lugar = address?.city ?? address?.town ?? address?.village ?? address?.municipality ?? address?.county;
+      return typeof lugar === 'string' ? lugar.slice(0, 100) : null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Pide permiso si hace falta y devuelve la ubicación actual. */
   async ubicacion(): Promise<Coordenadas> {
     try {

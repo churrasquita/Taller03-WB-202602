@@ -49,18 +49,21 @@ USUARIOS = [
     ("martin", "Martín Espinoza", "Vinilos y Lego. Armar y escuchar al mismo tiempo.", ["vinilos", "juguetes"]),
 ]
 
-# Dónde «se consiguieron» las piezas de prueba, para probar «Cerca de mí» (lugar, latitud, longitud, peso).
+# Dónde «se consiguieron» las piezas de prueba, todas en la región de Coquimbo
+# (lugar, latitud, longitud, peso).
 LUGARES = [
-    ("Providencia", -33.4263, -70.6110, 5),
-    ("Ñuñoa", -33.4569, -70.5975, 4),
-    ("Santiago Centro", -33.4489, -70.6693, 5),
-    ("Las Condes", -33.4083, -70.5670, 3),
-    ("Maipú", -33.5110, -70.7580, 2),
-    ("La Florida", -33.5227, -70.5987, 2),
-    ("Valparaíso", -33.0472, -71.6127, 2),
-    ("Viña del Mar", -33.0245, -71.5518, 2),
-    ("Concepción", -36.8270, -73.0498, 1),
-    ("La Serena", -29.9027, -71.2520, 1),
+    ("La Serena", -29.9027, -71.2520, 6),
+    ("Coquimbo", -29.9533, -71.3436, 5),
+    ("Ovalle", -30.6015, -71.1993, 3),
+    ("Vicuña", -30.0319, -70.7081, 2),
+    ("Andacollo", -30.2367, -71.0856, 1),
+    ("Illapel", -31.6308, -71.1653, 2),
+    ("Los Vilos", -31.9105, -71.5120, 2),
+    ("Salamanca", -31.7762, -70.9645, 1),
+    ("Monte Patria", -30.6933, -70.9433, 1),
+    ("Combarbalá", -31.1775, -71.0022, 1),
+    ("Paihuano", -30.0300, -70.5190, 1),
+    ("Tongoy", -30.2563, -71.4953, 2),
 ]
 # Códigos de barras de prueba por categoría. Los vinilos repiten un código: el mismo disco en dos colecciones.
 CODIGOS_DEMO = {
@@ -149,16 +152,16 @@ def main() -> None:
             dueno = coleccionistas[slug][turno[slug] % len(coleccionistas[slug])]
             turno[slug] += 1
             fecha = hace(DIAS)
-            latitud = longitud = codigo = None
+            latitud = longitud = codigo = lugar = None
             if geo.random() < 0.8:
-                _, lat, lng, _ = geo.choices(LUGARES, weights=[l[3] for l in LUGARES])[0]
+                lugar, lat, lng, _ = geo.choices(LUGARES, weights=[l[3] for l in LUGARES])[0]
                 latitud, longitud = round(lat + geo.uniform(-0.012, 0.012), 6), round(lng + geo.uniform(-0.012, 0.012), 6)
             if slug in codigos and turno[slug] % 3 == 1:
                 codigo = next(codigos[slug], None)
             piezas.append(Pieza(
                 nombre=foto["nombre"], descripcion=foto["descripcion"], imagen_url=f"/fotos-demo/{foto['archivo']}",
                 usuario_id=usuarios[dueno].id, categoria_id=categorias[slug].id, creado_en=fecha, actualizado_en=fecha,
-                codigo=codigo, latitud=latitud, longitud=longitud,
+                codigo=codigo, latitud=latitud, longitud=longitud, lugar=lugar,
             ))
         db.add_all(piezas)
         db.flush()

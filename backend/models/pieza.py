@@ -32,6 +32,7 @@ class Pieza(Base):
     codigo: Mapped[str | None] = mapped_column(String(128), index=True)
     latitud: Mapped[float | None] = mapped_column(Float)
     longitud: Mapped[float | None] = mapped_column(Float)
+    lugar: Mapped[str | None] = mapped_column(String(100))  # ciudad o comuna, para mostrar
 
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     actualizado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

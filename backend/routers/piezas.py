@@ -27,6 +27,7 @@ def a_respuesta(pieza: Pieza, request: Request, gustada: bool, guardada: bool) -
         codigo=pieza.codigo,
         latitud=pieza.latitud,
         longitud=pieza.longitud,
+        lugar=pieza.lugar,
         dueno=Dueno.model_validate(pieza.usuario),
         megusta=pieza.megusta,
         guardados=pieza.guardados,
@@ -216,6 +217,7 @@ def crear_pieza(datos: DatosPieza, usuario: UsuarioActual, request: Request, db:
         codigo=datos.codigo,
         latitud=datos.latitud,
         longitud=datos.longitud,
+        lugar=datos.lugar,
     )
     asignar_imagen(pieza, datos.imagen_url)
     db.add(pieza)
@@ -233,6 +235,7 @@ def editar_pieza(id: int, datos: DatosPieza, usuario: UsuarioActual, request: Re
     pieza.codigo = datos.codigo
     pieza.latitud = datos.latitud
     pieza.longitud = datos.longitud
+    pieza.lugar = datos.lugar
     asignar_imagen(pieza, datos.imagen_url)
     db.commit()
     db.refresh(pieza)

@@ -15,6 +15,7 @@ class DatosPieza(BaseModel):
     codigo: str | None = Field(default=None, max_length=128)
     latitud: float | None = Field(default=None, ge=-90, le=90)
     longitud: float | None = Field(default=None, ge=-180, le=180)
+    lugar: str | None = Field(default=None, max_length=100)
 
     @model_validator(mode="after")
     def coordenadas_completas(self):
@@ -22,6 +23,8 @@ class DatosPieza(BaseModel):
             raise ValueError("La ubicación necesita latitud y longitud")
         if self.codigo is not None and not self.codigo:
             self.codigo = None
+        if self.latitud is None or not self.lugar:
+            self.lugar = None
         return self
 
 
@@ -41,6 +44,7 @@ class PiezaRespuesta(BaseModel):
     codigo: str | None = None
     latitud: float | None = None
     longitud: float | None = None
+    lugar: str | None = None
     # Solo viene al buscar piezas cercanas: kilómetros desde el punto pedido.
     distancia_km: float | None = None
     dueno: Dueno
