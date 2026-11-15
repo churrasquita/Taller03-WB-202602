@@ -1,5 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// CAP_LOCAL=1 (npm run android:local): la app habla con el backend local por http. Nunca en producción.
+const local = process.env['CAP_LOCAL'] === '1';
+
 const config: CapacitorConfig = {
   appId: 'cl.vitrina.app',
   appName: 'Vitrina',
@@ -7,8 +10,9 @@ const config: CapacitorConfig = {
   webDir: 'dist/frontend/browser',
   android: {
     // La API de Railway usa https, así que no se permite tráfico http sin cifrar.
-    allowMixedContent: false,
+    allowMixedContent: local,
   },
+  ...(local ? { server: { androidScheme: 'http', cleartext: true } } : {}),
   plugins: {
     // Íconos oscuros de la barra de estado sobre el fondo claro de la app.
     SystemBars: { style: 'LIGHT' },

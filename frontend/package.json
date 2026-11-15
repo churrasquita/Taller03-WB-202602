@@ -7,6 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "build:movil": "ng build --configuration production && cap sync android",
+    "android:local": "ng build --configuration local && CAP_LOCAL=1 cap sync android && adb reverse tcp:8000 tcp:8000 && cd android && ./gradlew installDebug",
     "android:abrir": "cap open android",
     "android:apk": "npm run build:movil && cd android && gradlew assembleDebug",
     "assets:movil": "node resources/generar.mjs && capacitor-assets generate --android --iconBackgroundColor #2b4cff --splashBackgroundColor #2b4cff"

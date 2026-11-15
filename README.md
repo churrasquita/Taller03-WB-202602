@@ -112,6 +112,16 @@ npm run android:apk
 # APK: frontend/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Para probar en el celular con el backend de tu computador (Docker en marcha, celular por USB), sin depender de Railway:
+
+```bash
+# En .env agregar "http://localhost" a CORS_ORIGENES y reiniciar: docker compose up -d api
+cd frontend
+npm run android:local    # build "local" + adb reverse del puerto 8000 + instala el APK debug
+```
+
+Esto deja el proyecto Android apuntando al backend local; para volver a producción se corre `npm run build:movil`. El APK de GitHub Actions y el build de producción no cambian.
+
 Para instalarlo en el celular, se copia el APK y se abre (hay que permitir apps de origen desconocido), o con `adb install -r app-debug.apk`.
 
 El ícono y la pantalla de inicio salen de `frontend/resources/`. Para regenerarlos: `npm run assets:movil`.
