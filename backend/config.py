@@ -8,7 +8,7 @@ class Configuracion(BaseSettings):
     # "../.env" sirve al ejecutar desde backend/; en Docker las variables llegan por env_file.
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), extra="ignore")
 
-    postgres_user: str
+    postgres_user: str 
     postgres_password: str
     postgres_db: str
     postgres_host: str = "localhost"
